@@ -17,19 +17,17 @@ public static class GameModeData
 {
     public struct GameMode
     {
-        public GameMode(string name, bool isEndless, int goal)
+        public GameMode(string name, int goal)
         {
             modeName = name;
-            endless = isEndless;
             scoreGoal = goal;
         }
         public string modeName;
-        public bool endless;
         public int scoreGoal;
     }
 
-    public static GameMode speed10Round = new GameMode("SpeedRound", false, 10);
-    public static GameMode survive = new GameMode("Survive", true, 0);
+    public static GameMode speed10Round = new GameMode("SpeedRound", 10);
+    public static GameMode survive = new GameMode("Survive", 0);
 
     public static GameMode CurrentGameMode { get; set; }
 
