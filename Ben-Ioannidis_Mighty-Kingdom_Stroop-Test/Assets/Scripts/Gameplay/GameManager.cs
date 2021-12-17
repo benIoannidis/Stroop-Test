@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Purpose:
@@ -46,6 +47,12 @@ public class GameManager : MonoBehaviour
         Yellow
     }
 
+    public GameObject startMenu, pauseMenu;
+    public TMPro.TMP_Text gameModeText, gameModeDescription;
+
+    public GameObject endGamePanel, newHighscoreText;
+    public TMPro.TMP_Text playerScoreText, highscoreText;
+
     private void Start()
     {
         //Remove duplicate colours
@@ -61,7 +68,13 @@ public class GameManager : MonoBehaviour
         m_gameMode = GameModeData.CurrentGameMode.modeName;
         m_goalScore = GameModeData.CurrentGameMode.scoreGoal;
 
+        gameModeText.text = m_gameMode;
+        gameModeDescription.text = GameModeData.CurrentGameMode.description;
+
+
         scoreText.text = m_currentScore + "/" + m_goalScore;
+        pauseMenu.SetActive(false);
+        endGamePanel.SetActive(false);
     }
 
     private void Update()
@@ -113,10 +126,10 @@ public class GameManager : MonoBehaviour
         {
             if (c != m_currentColour)
             {
-                otherColours.Add(c);
-                otherColours.Add(c);
-                otherColours.Add(c);
-                otherColours.Add(c);
+                for (int i = 0; i < 6; i++)
+                {
+                    otherColours.Add(c);
+                }
             }
             else
             {
@@ -136,7 +149,7 @@ public class GameManager : MonoBehaviour
         {
             time += Time.deltaTime;
 
-            milliseconds = ((time - (time) * 100));
+            milliseconds = (int)((time - (int)time) * 100);
             seconds = (time % 60);
             minutes = (time / 60 % 60);
 
@@ -163,7 +176,7 @@ public class GameManager : MonoBehaviour
             else
             {
                 //Show game ended screen with "You did it!"
-                
+                GameCompleted();
             }
         }
 
@@ -222,25 +235,62 @@ public class GameManager : MonoBehaviour
         //regular round (fast as you can to goal score(10))
         if (m_gameMode == GameModeData.GetGameModes()[0].modeName)
         {
+            Time.timeScale = 0f;
+            endGamePanel.SetActive(true);
+            playerScoreText.text = "Your score: " + string.Format("{0:00}:{1:00}:{2:00}", minutes, seconds, milliseconds);
 
+            if (time < PlayerPrefs.GetFloat("SPHighscore") || !PlayerPrefs.HasKey("SPHighscore"))
+            {
+                newHighscoreText.SetActive(true);
+                PlayerPrefs.SetFloat("SPHighscore", time);
+            }
+            else
+            {
+                newHighscoreText.SetActive(false);
+            }
+
+            float mil, sec, min;
+            mil = (int)((PlayerPrefs.GetFloat("SPHighscore") - (int)PlayerPrefs.GetFloat("SPHighscore")) * 100);
+            sec = (PlayerPrefs.GetFloat("SPHighscore") % 60);
+            min = (PlayerPrefs.GetFloat("SPHighscore") / 60 % 60);
+
+            highscoreText.text = "Highscore: " + string.Format("{0:00}:{1:00}:{2:00}", min, sec, mil);
         }
     }
 
     #region ButtonInteraction
-    public void ExitPressed()
+    public void PausePressed()
     {
-
-    }
-
-    public void PlayPressed()
-    {
-
+        Time.timeScale = 0f;
+        pauseMenu.SetActive(true);
     }
 
     public void ResumePressed()
     {
-
+        Time.timeScale = 1.0f;
+        pauseMenu.SetActive(false);
     }
+
+    public void RestartPressed()
+    {
+        Time.timeScale = 1.0f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    public void ExitPressed()
+    {
+        //load menu scene
+        Application.Quit();
+    }
+
+    public void PlayPressed()
+    {
+        //start game
+        startMenu.SetActive(false);
+        NewRound();
+        StartCoroutine("StopWatch");
+    }
+
 
     public void RedPressed()
     {

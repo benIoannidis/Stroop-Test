@@ -17,17 +17,19 @@ public static class GameModeData
 {
     public struct GameMode
     {
-        public GameMode(string name, int goal)
+        public GameMode(string name, int goal, string desc)
         {
             modeName = name;
             scoreGoal = goal;
+            description = desc;
         }
         public string modeName;
         public int scoreGoal;
+        public string description;
     }
 
-    public static GameMode speed10Round = new GameMode("SpeedRound", 10);
-    public static GameMode survive = new GameMode("Survive", 0);
+    public static GameMode speed10Round = new GameMode("Speed Round", 10, "Get to 10 as fast as you can!");
+    public static GameMode survive = new GameMode("Survive", 0, "Answer correctly to keep time on the clock!");
 
     public static GameMode CurrentGameMode { get; set; }
 
