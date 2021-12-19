@@ -54,6 +54,9 @@ public class GameManager : MonoBehaviour
     public GameObject endGamePanel, newHighscoreText;
     public TMPro.TMP_Text playerScoreText, highscoreText, winText;
 
+    public AudioClip correctSound, incorrectSound;
+    private AudioSource correctSource, incorrectSource;
+
     private void Start()
     {
         //Remove duplicate colours
@@ -64,8 +67,6 @@ public class GameManager : MonoBehaviour
         distinctColours.CopyTo(m_colours);
 
         //check current gamemode that has been set via the main menu
-        //m_gameMode = GameModeData.CurrentGameMode.modeName;
-        GameModeData.CurrentGameMode = GameModeData.survive;
         m_gameMode = GameModeData.CurrentGameMode.modeName;
         if (m_gameMode == GameModeData.survive.modeName)
         {
@@ -80,6 +81,16 @@ public class GameManager : MonoBehaviour
         scoreText.text = m_currentScore + "/" + m_goalScore;
         pauseMenu.SetActive(false);
         endGamePanel.SetActive(false);
+
+        correctSource = this.gameObject.AddComponent<AudioSource>();
+        correctSource.playOnAwake = false;
+        correctSource.loop = false;
+        correctSource.clip = correctSound;
+
+        incorrectSource = this.gameObject.AddComponent<AudioSource>();
+        incorrectSource.playOnAwake = false;
+        incorrectSource.loop = false;
+        incorrectSource.clip = incorrectSound;
     }
 
     private void Update()
@@ -183,6 +194,10 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void CorrectAnswer()
     {
+        if (!GameModeData.AudioIsMuted)
+        {
+            correctSource.Play();
+        }
         //regular round (fast as you can to goal score (10))
         if (m_gameMode == GameModeData.GetGameModes()[0].modeName) 
         {
@@ -221,6 +236,10 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void WrongAnswer()
     {
+        if (!GameModeData.AudioIsMuted)
+        {
+            incorrectSource.Play();
+        }
         //regular round (fast as you can to goal score(10))
         if (m_gameMode == GameModeData.GetGameModes()[0].modeName)
         {
@@ -338,7 +357,7 @@ public class GameManager : MonoBehaviour
     public void ExitPressed()
     {
         //load menu scene
-        Application.Quit();
+        SceneManager.LoadScene("MenuScene");
     }
 
     public void PlayPressed()
@@ -354,6 +373,7 @@ public class GameManager : MonoBehaviour
         {
             StartCoroutine("Timer");
         }
+        Time.timeScale = 1f;
     }
 
 

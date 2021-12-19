@@ -40,5 +40,5 @@ public static class GameModeData
         return m_GameModes;
     }
 
-
+    public static bool AudioIsMuted = false;
 }
