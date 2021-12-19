@@ -28,6 +28,7 @@ public class GameManager : MonoBehaviour
     private bool gameOver;
 
     public TMPro.TMP_Text timerText;
+    public TMPro.TMP_Text answerTimerText;
     private float time;
     private float milliseconds, seconds, minutes;
 
@@ -51,7 +52,7 @@ public class GameManager : MonoBehaviour
     public TMPro.TMP_Text gameModeText, gameModeDescription;
 
     public GameObject endGamePanel, newHighscoreText;
-    public TMPro.TMP_Text playerScoreText, highscoreText;
+    public TMPro.TMP_Text playerScoreText, highscoreText, winText;
 
     private void Start()
     {
@@ -64,8 +65,12 @@ public class GameManager : MonoBehaviour
 
         //check current gamemode that has been set via the main menu
         //m_gameMode = GameModeData.CurrentGameMode.modeName;
-        GameModeData.CurrentGameMode = GameModeData.speed10Round;
+        GameModeData.CurrentGameMode = GameModeData.survive;
         m_gameMode = GameModeData.CurrentGameMode.modeName;
+        if (m_gameMode == GameModeData.survive.modeName)
+        {
+            time = 20f;
+        }
         m_goalScore = GameModeData.CurrentGameMode.scoreGoal;
 
         gameModeText.text = m_gameMode;
@@ -79,14 +84,14 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            NewRound();
-        }
-
-        if (Input.GetKeyDown(KeyCode.S))
-        {
-            StartCoroutine("StopWatch");
+        if (m_gameMode == GameModeData.survive.modeName)
+        { 
+            if (time <= 0 && Time.timeScale > 0)
+            {
+                StopAllCoroutines();
+                time = 0f;
+                GameCompleted();
+            }
         }
     }
 
@@ -158,6 +163,21 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private IEnumerator Timer()
+    {
+        while (true)
+        {
+            time -= Time.deltaTime;
+
+            milliseconds = (int)((time - (int)time) * 100);
+            seconds = (time % 60);
+            minutes = (time / 60 % 60);
+
+            timerText.text = string.Format("{0:00}:{1:00}:{2:00}", minutes, seconds, milliseconds);
+            yield return null;
+        }
+    }
+
     /// <summary>
     /// Called when the user has answered correctly
     /// </summary>
@@ -183,7 +203,15 @@ public class GameManager : MonoBehaviour
         //survival game mode
         else
         {
+            m_currentScore++;
+            scoreText.text = "Score: " + m_currentScore;
 
+            answerTimerText.text = "+ 00:00:50";
+            answerTimerText.color = Color.green;
+            answerTimerText.gameObject.SetActive(true);
+            answerTimerText.GetComponent<TimerFlash>().FlashNewTime();
+
+            time += 0.5f;
         }
         NewRound();
     }
@@ -211,7 +239,12 @@ public class GameManager : MonoBehaviour
         //survival game mode
         else
         {
+            answerTimerText.text = "- 00:02:00";
+            answerTimerText.color = Color.red;
+            answerTimerText.gameObject.SetActive(true);
+            answerTimerText.GetComponent<TimerFlash>().FlashNewTime();
 
+            time -= 2f;
         }
         NewRound();
     }
@@ -236,6 +269,9 @@ public class GameManager : MonoBehaviour
         if (m_gameMode == GameModeData.GetGameModes()[0].modeName)
         {
             Time.timeScale = 0f;
+
+            winText.text = "Score Reached!";
+
             endGamePanel.SetActive(true);
             playerScoreText.text = "Your score: " + string.Format("{0:00}:{1:00}:{2:00}", minutes, seconds, milliseconds);
 
@@ -256,6 +292,27 @@ public class GameManager : MonoBehaviour
 
             highscoreText.text = "Highscore: " + string.Format("{0:00}:{1:00}:{2:00}", min, sec, mil);
         }
+        else
+        {
+            Time.timeScale = 0f;
+
+            winText.text = "You lasted a while!";
+
+            endGamePanel.SetActive(true);
+            playerScoreText.text = "Your score: " + m_currentScore;
+
+            if (m_currentScore > PlayerPrefs.GetInt("SurvivalHighscore") || !PlayerPrefs.HasKey("SurvivalHighscore"))
+            {
+                newHighscoreText.SetActive(true);
+                PlayerPrefs.SetInt("SurvivalHighscore", m_currentScore);
+            }
+            else
+            {
+                newHighscoreText.SetActive(false);
+            }
+
+            highscoreText.text = "Highscore: " + PlayerPrefs.GetInt("SurvivalHighscore");
+        }
     }
 
     #region ButtonInteraction
@@ -273,6 +330,7 @@ public class GameManager : MonoBehaviour
 
     public void RestartPressed()
     {
+        time = 20;
         Time.timeScale = 1.0f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
@@ -288,7 +346,14 @@ public class GameManager : MonoBehaviour
         //start game
         startMenu.SetActive(false);
         NewRound();
-        StartCoroutine("StopWatch");
+        if (m_gameMode == GameModeData.speed10Round.modeName)
+        {
+            StartCoroutine("StopWatch");
+        }
+        else
+        {
+            StartCoroutine("Timer");
+        }
     }
 
 
