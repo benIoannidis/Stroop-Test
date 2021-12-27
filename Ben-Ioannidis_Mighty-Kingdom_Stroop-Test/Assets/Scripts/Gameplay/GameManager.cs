@@ -15,28 +15,39 @@ using UnityEngine.SceneManagement;
 /// -> 13/12/21 - Script created
 /// -> 13/12/21 - Added button interaction functions
 /// -> 13/12/21 - Added "Correct Answer" function
-/// -> 
+/// -> 17/12/21 - Added UI element references 
+/// -> 17/12/21 - Created "landing screen" which shows gamemode and it's description
+/// -> 17/12/21 - Created end-game state (game completed) - this included the highscore checking and setting
+/// -> 17/12/21 - Created event functions for in-game menu actions
 /// </summary>
 public class GameManager : MonoBehaviour
 {
+    //Name of the current game mode
     private static string m_gameMode;
 
+    //score text element
     public TMPro.TMP_Text scoreText;
 
+    //player's current score
     private int m_currentScore;
+
+    //used for the "Speed Round", not for survival
     private int m_goalScore;
     private bool gameOver;
 
+    //text for timers
     public TMPro.TMP_Text timerText;
     public TMPro.TMP_Text answerTimerText;
+
+    //timer variables
     private float time;
     private float milliseconds, seconds, minutes;
 
+    //Colour text and enum for picking colours via inspector
     public TMPro.TMP_Text colourText;
     private colour m_currentColour;
 
     public colour[] m_colours;
-
     [System.Serializable]
     public enum colour
     {
@@ -48,12 +59,14 @@ public class GameManager : MonoBehaviour
         Yellow
     }
 
+    //UI elements
     public GameObject startMenu, pauseMenu;
     public TMPro.TMP_Text gameModeText, gameModeDescription;
 
     public GameObject endGamePanel, newHighscoreText;
     public TMPro.TMP_Text playerScoreText, highscoreText, winText;
 
+    //Audio sources/clips
     public AudioClip correctSound, incorrectSound;
     private AudioSource correctSource, incorrectSource;
 
@@ -68,20 +81,29 @@ public class GameManager : MonoBehaviour
 
         //check current gamemode that has been set via the main menu
         m_gameMode = GameModeData.CurrentGameMode.modeName;
+
+        //if in the survival game mode, set the timer to 20 seconds and set the score text
         if (m_gameMode == GameModeData.survive.modeName)
         {
             time = 20f;
+            scoreText.text = "Score: 0";
         }
-        m_goalScore = GameModeData.CurrentGameMode.scoreGoal;
+        //if in the speed round, get the goal score, and set the score text to be " 0 / goalScore"
+        else
+        {
+            m_goalScore = GameModeData.CurrentGameMode.scoreGoal;
+            scoreText.text = m_currentScore + "/" + m_goalScore;
+        }
 
+        //Set the game mode name and description on the "landing screen"
         gameModeText.text = m_gameMode;
         gameModeDescription.text = GameModeData.CurrentGameMode.description;
 
-
-        scoreText.text = m_currentScore + "/" + m_goalScore;
+        //hide currently unrequired UI elements
         pauseMenu.SetActive(false);
         endGamePanel.SetActive(false);
 
+        //add the audio clips to the audio sources
         correctSource = this.gameObject.AddComponent<AudioSource>();
         correctSource.playOnAwake = false;
         correctSource.loop = false;
@@ -95,6 +117,7 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
+        //once the timer reaches 0, stop the timers and run game complete function
         if (m_gameMode == GameModeData.survive.modeName)
         { 
             if (time <= 0 && Time.timeScale > 0)
@@ -106,6 +129,9 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Called on an answer being provided, will select a new colour, and colour name to display
+    /// </summary>
     private void NewRound()
     {
         m_currentColour = m_colours[Random.Range(0, m_colours.Length)];
@@ -137,7 +163,7 @@ public class GameManager : MonoBehaviour
 
         List<colour> otherColours = new List<colour>();
 
-        //make a higher chance of the text not matching the colour (but still leave the chance for it to match occassionally)
+        //give a higher chance of the text not matching the colour (but still leave the chance for it to match occassionally)
         foreach (colour c in m_colours)
         {
             if (c != m_currentColour)
@@ -159,6 +185,9 @@ public class GameManager : MonoBehaviour
         colourText.color = textColour;
     }
 
+    /// <summary>
+    /// Starts the stopwatch (counting up for speed round highscore times)
+    /// </summary>
     private IEnumerator StopWatch()
     {
         while (true)
@@ -174,6 +203,9 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Starts the timer (counting down for the survival lose condition (ie. timer reaches 0))
+    /// </summary>
     private IEnumerator Timer()
     {
         while (true)
@@ -194,11 +226,12 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void CorrectAnswer()
     {
+        //if audio is allowed, play the "correct" sound
         if (!GameModeData.AudioIsMuted)
         {
             correctSource.Play();
         }
-        //regular round (fast as you can to goal score (10))
+        //speed round, add 1 to the current player score
         if (m_gameMode == GameModeData.GetGameModes()[0].modeName) 
         {
             if (m_currentScore < m_goalScore - 1)
@@ -210,12 +243,11 @@ public class GameManager : MonoBehaviour
             //game completed
             else
             {
-                //Show game ended screen with "You did it!"
                 GameCompleted();
             }
         }
 
-        //survival game mode
+        //survival game mode, add 0.5 seconds to the timer and add 1 to the current score
         else
         {
             m_currentScore++;
@@ -228,6 +260,7 @@ public class GameManager : MonoBehaviour
 
             time += 0.5f;
         }
+        //generate a new colour and name
         NewRound();
     }
 
@@ -236,11 +269,12 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void WrongAnswer()
     {
+        //if audio is allowed, play the "incorrect" sound
         if (!GameModeData.AudioIsMuted)
         {
             incorrectSource.Play();
         }
-        //regular round (fast as you can to goal score(10))
+        //speed round, subtract 2 from the current player score (if possible)
         if (m_gameMode == GameModeData.GetGameModes()[0].modeName)
         {
             if (m_currentScore >= 2)
@@ -255,7 +289,7 @@ public class GameManager : MonoBehaviour
             scoreText.text = m_currentScore + "/" + m_goalScore;
         }
 
-        //survival game mode
+        //survival game mode, subtract 2 seconds from the timer
         else
         {
             answerTimerText.text = "- 00:02:00";
@@ -265,6 +299,7 @@ public class GameManager : MonoBehaviour
 
             time -= 2f;
         }
+        //generate a new colour and name
         NewRound();
     }
 
@@ -272,7 +307,7 @@ public class GameManager : MonoBehaviour
     /// Compare answer given to the correct answer
     /// </summary>
     /// <param name="col">pass in the relevant colour based on button pressed</param>
-    /// <returns></returns>
+    /// <returns>true if the button press matches the current colour</returns>
     private bool CheckAnswer(colour col)
     {
         if (col == m_currentColour)
@@ -282,9 +317,12 @@ public class GameManager : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Called once a end condition has been met (score reached, or timer reaches 0)
+    /// </summary>
     private void GameCompleted()
     {
-        //regular round (fast as you can to goal score(10))
+        //speed round, set the text on the end-game screen and check if a highscore has been obtained
         if (m_gameMode == GameModeData.GetGameModes()[0].modeName)
         {
             Time.timeScale = 0f;
@@ -311,6 +349,7 @@ public class GameManager : MonoBehaviour
 
             highscoreText.text = "Highscore: " + string.Format("{0:00}:{1:00}:{2:00}", min, sec, mil);
         }
+        //survival round, set the text on the end-game screen, and check if a highscore has been obtained
         else
         {
             Time.timeScale = 0f;
@@ -335,18 +374,27 @@ public class GameManager : MonoBehaviour
     }
 
     #region ButtonInteraction
+    /// <summary>
+    /// Pause button press event, freeze time and show the pause menu UI
+    /// </summary>
     public void PausePressed()
     {
         Time.timeScale = 0f;
         pauseMenu.SetActive(true);
     }
 
+    /// <summary>
+    /// Resume button press event, resume time and hide the pause menu UI
+    /// </summary>
     public void ResumePressed()
     {
         Time.timeScale = 1.0f;
         pauseMenu.SetActive(false);
     }
 
+    /// <summary>
+    /// Restart button press event, resume time and reload the scene
+    /// </summary>
     public void RestartPressed()
     {
         time = 20;
@@ -354,12 +402,18 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
+    /// <summary>
+    /// Exit button press event, load the menu scene
+    /// </summary>
     public void ExitPressed()
     {
         //load menu scene
         SceneManager.LoadScene("MenuScene");
     }
 
+    /// <summary>
+    /// Play button press event, start a new round, and start the stopwatch, or the timer for speed round, and survival round respectively
+    /// </summary>
     public void PlayPressed()
     {
         //start game
@@ -376,59 +430,62 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1f;
     }
 
-
+    /// <summary>
+    /// Red button press event, check whether the answer was Red or not
+    /// </summary>
     public void RedPressed()
     {
         if (CheckAnswer(colour.Red))
         {
-            Debug.Log("Correct answer!");
             CorrectAnswer();
         }
         else
         {
-            Debug.Log("wrong answer :(");
             WrongAnswer();
         }
     }
 
+    /// <summary>
+    /// Blue button press event, check whether the answer was Blue or not
+    /// </summary>
     public void BluePressed()
     {
         if (CheckAnswer(colour.Blue))
         {
-            Debug.Log("Correct answer!");
             CorrectAnswer();
         }
         else
         {
-            Debug.Log("wrong answer :(");
             WrongAnswer();
         }
     }
 
+    /// <summary>
+    /// Yellow button press event, check whether the answer was Yellow or not
+    /// </summary>
     public void YellowPressed()
     {
         if (CheckAnswer(colour.Yellow))
         {
-            Debug.Log("Correct answer!");
             CorrectAnswer();
         }
         else
         {
-            Debug.Log("wrong answer :(");
             WrongAnswer();
         }
     }
 
+    /// <summary>
+    /// Magenta button press event, check whether the answer was Magenta or not
+    /// </summary>
     public void MagentaPressed()
     {
         if (CheckAnswer(colour.Magenta))
         {
-            Debug.Log("Correct answer!");
             CorrectAnswer();
         }
         else
         {
-            Debug.Log("wrong answer :(");
             WrongAnswer();
         }
     }
